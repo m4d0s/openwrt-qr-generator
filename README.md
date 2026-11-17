@@ -11,7 +11,7 @@
   - root/usr/share/luci/menu.d/luci-app-qr-generator.json — меню
   - root/usr/libexec/qr-generate.sh — генерация QR через qrencode
   - root/www/cgi-bin/qr-generate — CGI-скрипт генерации
-  - htdocs/luci-static/resources/view/qr-generator/*.js — frontend (text/email/url/wifi)
+  - htdocs/luci-static/resources/view/qr-generator/*.js — frontend (text/email/url/wifi/vcard)
 
 ## Что нужно для сборки
 
