@@ -1,0 +1,21 @@
+{
+    "luci-app-qr-generator": {
+        "description": "QR Code Generator",
+        "read": {
+            "ubus": {
+                "luci.qr-generator": [
+                    "status",
+                    "wifi"
+                ]
+            }
+        },
+        "write": {
+            "ubus": {
+                "luci.qr-generator": [
+                    "generate_typed",
+                    "wifi_generate"
+                ]
+            }
+        }
+    }
+}

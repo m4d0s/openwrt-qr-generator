@@ -1,0 +1,65 @@
+{
+    "admin/services/qr-generator": {
+        "title": "QR Code Generator",
+        "order": 90,
+        "action": {
+            "type": "view",
+            "path": "qr-generator/text"
+        }
+    },
+    "admin/services/qr-generator/text": {
+        "title": "Текст",
+        "order": 1,
+        "action": {
+            "type": "view",
+            "path": "qr-generator/text"
+        },
+        "depends": {
+            "acl": ["luci-app-qr-generator"]
+        }
+    },
+    "admin/services/qr-generator/email": {
+        "title": "Электронная почта",
+        "order": 2,
+        "action": {
+            "type": "view",
+            "path": "qr-generator/email"
+        },
+        "depends": {
+            "acl": ["luci-app-qr-generator"]
+        }
+    },
+    "admin/services/qr-generator/url": {
+        "title": "Ссылка",
+        "order": 3,
+        "action": {
+            "type": "view",
+            "path": "qr-generator/url"
+        },
+        "depends": {
+            "acl": ["luci-app-qr-generator"]
+        }
+    },
+    "admin/services/qr-generator/wifi": {
+        "title": "Wi-Fi",
+        "order": 4,
+        "action": {
+            "type": "view",
+            "path": "qr-generator/wifi"
+        },
+        "depends": {
+            "acl": ["luci-app-qr-generator"]
+        }
+    },
+    "admin/services/qr-generator/vcard": {
+        "title": "Визитка",
+        "order": 5,
+        "action": {
+            "type": "view",
+            "path": "qr-generator/vcard"
+        },
+        "depends": {
+            "acl": ["luci-app-qr-generator"]
+        }
+    }
+}

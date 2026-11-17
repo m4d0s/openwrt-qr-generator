@@ -1,0 +1,22 @@
+Release description — luci-app-qr-generator 1.2-r1
+
+Последний релиз QR Code Generator для OpenWrt (LuCI).
+
+Содержание релиза:
+- Удалено сохранение истории в целом (backend, frontend, ACL): методы history/show/history_delete/history_clear и wifi_refresh больше не используются.
+- Сохранение картинок переведено на TTL: сохранение только последней картинки в /tmp/generateq/<kind>.encode, очистка при хранении дольше 24 часов.
+- При создании QR-кода теперь под сообщением "QR-код создан." выводится полный текст кода (pre/code); для Wi-Fi — полный WIFI payload.
+- Исправлена загрузка списка Wi-Fi точек доступа (убран каскад wifi_refresh -> list, список грузится напрямую).
+- Добавлена генерация QR-кода визитки (тип vCard): новый тип контактов «Визитка» во frontend (контактный vCard: FN, ORG, TEL, EMAIL, URL), backend принимает kind=vcard, QR генерируется из vCard-строки.
+
+Зависимости сборки:
+- OpenWrt SDK
+- LuCI (feeds/luci)
+- qrencode
+
+Сборка:
+- make package/luci-app-qr-generator/compile
+
+Установка:
+- apk add --allow-untrusted <apk>
+- /etc/init.d/rpcd restart

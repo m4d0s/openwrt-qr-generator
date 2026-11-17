@@ -1,0 +1,53 @@
+#!/bin/sh
+# CGI-скрипт для генерации QR-кодов (обходит ubus/rpcd)
+# Принимает POST с JSON, возвращает JSON
+
+# Заголовок JSON
+echo "Content-Type: application/json"
+echo ""
+
+# Читаем тело запроса
+read -r body
+
+# Извлекаем параметры из JSON (простой парсинг через grep/sed)
+kind=$(echo "$body" | grep -o '"kind":"[^"]*"' | sed 's/"kind":"//;s/"//')
+content=$(echo "$body" | grep -o '"content":"[^"]*"' | sed 's/"content":"//;s/"$//')
+size=$(echo "$body" | grep -o '"size":[0-9]*' | sed 's/"size"://')
+level=$(echo "$body" | grep -o '"level":"[^"]*"' | sed 's/"level":"//;s/"//')
+identifier=$(echo "$body" | grep -o '"identifier":"[^"]*"' | sed 's/"identifier":"//;s/"//')
+
+# Значения по умолчанию
+[ -z "$size" ] && size=8
+[ -z "$level" ] && level=M
+
+# Проверяем qrencode
+if [ ! -x /usr/bin/qrencode ]; then
+    echo '{"ok":false,"error":"qrencode не установлен"}'
+    exit 0
+fi
+
+# Генерируем timestamp с миллисекундами
+stamp=$(date +%Y%m%d%H%M%S)
+ms=$(date +%N | cut -c1-3)
+stamp="${stamp}${ms}"
+
+# Генерируем SVG
+svg_file="/tmp/qrencode/${stamp}.svg"
+mkdir -p /tmp/qrencode
+
+if ! /usr/bin/qrencode -t SVG -o "$svg_file" -s "$size" -l "$level" -- "$content" 2>/dev/null; then
+    echo '{"ok":false,"error":"qrencode вернул ошибку"}'
+    exit 0
+fi
+
+# Кодируем в base64
+b64=$(base64 -w0 "$svg_file" 2>/dev/null)
+rm -f "$svg_file"
+
+if [ -z "$b64" ]; then
+    echo '{"ok":false,"error":"base64 кодирование не удалось"}'
+    exit 0
+fi
+
+# Возвращаем JSON
+echo "{\"ok\":true,\"image\":\"$b64\",\"stamp\":\"$stamp\",\"kind\":\"$kind\"}"
