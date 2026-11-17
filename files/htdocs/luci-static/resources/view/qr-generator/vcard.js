@@ -32,7 +32,7 @@ function callGen(kind, content, size, level, identifier) {
 	}).then(function(resp) {
 		return resp.json();
 	}).then(function(data) {
-		return { ok: data.ok, error: data.error, image: data.image, log: data.stamp || '/tmp/generateq/logs/' };
+		return { ok: data.ok, error: data.error, image: data.image, log: data.stamp || '/tmp/qr-gen/logs/' };
 	});
 }
 
@@ -48,21 +48,40 @@ function levelSelect() {
 	}));
 }
 
-function buildVCard(fn, org, phones, emails, urls) {
-	var lines = ['BEGIN:VCARD', 'VERSION:3.0'];
+function buildVCard(version, fn, org, phones, emails, urls) {
+	var lines = ['BEGIN:VCARD', 'VERSION:' + version];
 	if (fn) lines.push('FN:' + fn);
 	if (org) lines.push('ORG:' + org);
 	for (var i = 0; i < phones.length; i++) {
-		if (phones[i].value) lines.push('TEL;TYPE=' + (phones[i].type || 'CELL') + ':' + phones[i].value);
+		if (phones[i].value) {
+			var t = phones[i].type || 'CELL';
+			if (version == '2.1') lines.push('TEL;' + t + ':' + phones[i].value);
+			else if (version == '3.0') lines.push('TEL;TYPE=' + t + ':' + phones[i].value);
+			else lines.push('TEL;VALUE=uri;TYPE=' + t + ':tel:' + phones[i].value);
+		}
 	}
 	for (var j = 0; j < emails.length; j++) {
-		if (emails[j].value) lines.push('EMAIL;TYPE=INTERNET:' + emails[j].value);
+		if (emails[j].value) {
+			var et = emails[j].type || 'INTERNET';
+			if (version == '2.1') lines.push('EMAIL;INTERNET:' + emails[j].value);
+			else lines.push('EMAIL;TYPE=' + et + ':' + emails[j].value);
+		}
 	}
 	for (var k = 0; k < urls.length; k++) {
 		if (urls[k].value) lines.push('URL:' + urls[k].value);
 	}
 	lines.push('END:VCARD');
 	return lines.join('\r\n');
+}
+
+function downloadVCard(contentStr) {
+	var blob = new Blob([contentStr], { type: 'text/vcard' });
+	var url = URL.createObjectURL(blob);
+	var a = document.createElement('a');
+	a.href = url;
+	a.download = 'contact.vcard';
+	a.click();
+	URL.revokeObjectURL(url);
 }
 
 return view.extend({
@@ -72,6 +91,11 @@ return view.extend({
 
 	render: function(data) {
 		var result = E('div', { 'class': 'alert-message', 'style': 'display:none; margin-top:15px' });
+
+		var version = '3.0';
+		var versionSelect = E('select', { 'class': 'cbi-input-select', 'style': 'max-width:320px; margin-bottom:15px;' });
+		['2.1', '3.0', '4.0'].forEach(function(v) { versionSelect.appendChild(E('option', { 'value': v }, v)); });
+		versionSelect.value = version;
 
 		var fnInput = E('input', { 'class': 'cbi-input-text', 'style': 'width:100%;', 'placeholder': 'Иван Иванов' });
 		var orgInput = E('input', { 'class': 'cbi-input-text', 'style': 'width:100%;', 'placeholder': 'ООО «Ромашка»' });
@@ -97,7 +121,7 @@ return view.extend({
 		renderPhones();
 
 		var emailBox = E('div', { 'style': 'margin-top:10px;' });
-		var emailRows = [ { value: '' } ];
+		var emailRows = [ { type: 'INTERNET', value: '' } ];
 
 		function renderEmails() {
 			while (emailBox.firstChild) { emailBox.removeChild(emailBox.firstChild); }
@@ -129,7 +153,7 @@ return view.extend({
 		renderUrls();
 
 		function addPhone() { phoneRows.push({ type: 'CELL', value: '' }); renderPhones(); }
-		function addEmail() { emailRows.push({ value: '' }); renderEmails(); }
+		function addEmail() { emailRows.push({ type: 'INTERNET', value: '' }); renderEmails(); }
 		function addUrl() { urlRows.push({ value: '' }); renderUrls(); }
 
 		var size = sizeSelect();
@@ -138,7 +162,20 @@ return view.extend({
 		var button = E('button', {
 			'class': 'btn cbi-button cbi-button-action',
 			'click': function() {
-				var contentStr = buildVCard(fnInput.value.trim(), orgInput.value.trim(), phoneRows, emailRows, urlRows);
+				var contentStr = buildVCard(version, fnInput.value.trim(), orgInput.value.trim(), phoneRows, emailRows, urlRows);
+				var context = 'Визитка' + (fnInput.value.trim() ? ': ' + fnInput.value.trim() : '');
+				if ((version == '3.0' || version == '4.0') && !fnInput.value.trim()) {
+					result.style.display = '';
+					result.className = 'alert-message error';
+					result.textContent = 'Контекст QR-кода: Ошибка: для vCard ' + version + ' обязательно поле ФИО (FN).';
+					return;
+				}
+				if (contentStr.length > 3000) {
+					result.style.display = '';
+					result.className = 'alert-message error';
+					result.textContent = 'Контекст QR-кода: Содержимое превышает лимит QR-кода (~2-3 КБ), код может не создать.';
+					return;
+				}
 				button.disabled = true;
 				button.textContent = 'Создание...';
 				callGen('vcard', contentStr, +size.value, level.value, '').then(function(r) {
@@ -153,14 +190,18 @@ return view.extend({
 						result.appendChild(img);
 						var code = E('pre', { 'style': 'text-align:left; margin:10px 0 0 0; padding:8px; background:#f5f5f5; border:1px solid #ddd; max-height:150px; overflow:auto; word-break:break-all' }, [E('code', {}, contentStr)]);
 						result.appendChild(code);
+						var dl = E('div', { class: 'right', style: 'margin-top:10px' }, [
+							E('button', { 'class': 'btn cbi-button', 'click': function() { downloadVCard(contentStr); } }, 'Скачать .vcf')
+						]);
+						result.appendChild(dl);
 					} else {
 						result.className = 'alert-message error';
-						result.textContent = r.error || ('Не удалось создать QR-код. См. логи: ' + (r.log || '/tmp/generateq/logs/'));
+						result.textContent = 'Контекст QR-кода: ' + (r.error || ('Не удалось создать QR-код. См. логи: ' + (r.log || '/tmp/qr-gen/logs/')));
 					}
 				}).catch(function(error) {
 					result.style.display = '';
 					result.className = 'alert-message error';
-					result.textContent = 'Ошибка: ' + error;
+					result.textContent = 'Контекст QR-кода: Ошибка: ' + error;
 				}).finally(function() {
 					button.disabled = false;
 					button.textContent = 'Создать QR-код';
@@ -171,6 +212,10 @@ return view.extend({
 		return E('div', { 'class': 'cbi-map' }, [
 			E('h2', {}, 'Визитка'),
 			E('p', {}, 'QR-код визитки vCard со списком контактов: ФИО, телефоны, e-mail и сайты.'),
+			E('div', { 'style': 'margin-bottom:10px' }, [
+				E('label', { 'class': 'cbi-value-title' }, 'Версия vCard'),
+				versionSelect
+			]),
 			E('div', { 'class': 'cbi-section' }, [
 				E('label', { 'class': 'cbi-value-title' }, 'ФИО'),
 				fnInput,
