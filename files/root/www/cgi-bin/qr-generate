@@ -32,8 +32,8 @@ ms=$(date +%N | cut -c1-3)
 stamp="${stamp}${ms}"
 
 # Генерируем SVG
-svg_file="/tmp/qrencode/${stamp}.svg"
-mkdir -p /tmp/qrencode
+svg_file="/tmp/qr-gen/${stamp}.svg"
+mkdir -p /tmp/qr-gen
 
 if ! /usr/bin/qrencode -t SVG -o "$svg_file" -s "$size" -l "$level" -- "$content" 2>/dev/null; then
     echo '{"ok":false,"error":"qrencode вернул ошибку"}'

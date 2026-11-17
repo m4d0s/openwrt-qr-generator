@@ -75,7 +75,7 @@ return view.extend({
 					result.style.display = '';
 					if (r.ok) {
 						result.className = 'alert-message success';
-						result.textContent = 'QR-код создан.';
+						result.textContent = 'Контекст QR-кода: ' + text;
 						var img = E('img', {
 							'src': 'data:image/svg+xml;base64,' + r.image,
 							'style': 'display:block; max-width:220px; height:auto; margin:10px auto; image-rendering:pixelated'

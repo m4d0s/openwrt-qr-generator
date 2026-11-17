@@ -80,6 +80,7 @@ function showQR(net, button, size, level) {
 					'src': 'data:image/svg+xml;base64,' + response.image,
 					'style': 'max-width:100%; height:auto; image-rendering:pixelated'
 				}),
+				E('p', {}, 'Контекст QR-кода: Wi-Fi ' + (net.ssid || '(скрытая)')),
 				E('p', {}, net.ssid || 'Скрытая сеть'),
 				E('p', {}, 'Защита: ' + enc)
 			]),

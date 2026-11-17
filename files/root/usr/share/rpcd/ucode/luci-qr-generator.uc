@@ -7,9 +7,8 @@ import { cursor } from 'uci';
 
 const uci = cursor();
 
-const BASE_DIR = '/tmp/generateq';
+const BASE_DIR = '/tmp/qr-gen';
 const LOG_DIR = BASE_DIR + '/logs';
-const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 /* ---------- логирование ---------- */
 
@@ -80,50 +79,7 @@ function fmt_ts(ts, ms) {
 function ensure_dirs() {
 	system('mkdir -p ' + BASE_DIR);
 	system('mkdir -p ' + LOG_DIR);
-	system('mkdir -p /tmp/qrencode');
-	system('touch ' + BASE_DIR + '/text.encode');
-	system('touch ' + BASE_DIR + '/wifi.encode');
-	system('touch ' + BASE_DIR + '/email.encode');
-	system('touch ' + BASE_DIR + '/url.encode');
 	return true;
-}
-
-function image_file(kind) {
-	return BASE_DIR + '/' + kind + '.encode';
-}
-
-function image_save(kind, line, context) {
-	let lp = log_path_for(time());
-	let path = image_file(kind);
-	try {
-		let f = open(path, 'r');
-		if (f) {
-			let data = f.read('all');
-			let first = split(data, '\n')[0];
-			if (length(first)) {
-				let parts = split(first, '\t');
-				let oldStamp = parts[0];
-				if (type(oldStamp) == 'string' && length(oldStamp) > 0) {
-					let ago = fmt_ts(time() - (MAX_AGE_MS / 1000), 0);
-					if (oldStamp < ago) {
-						try { unlink(path); } catch (e) {}
-					}
-				}
-			}
-		}
-	} catch (e) {}
-	let tmp = path + '.tmp';
-	let f2 = null;
-	try {
-		f2 = open(tmp, 'w', 0o600);
-		f2.write(line + '\n');
-		f2.close();
-		rename(tmp, path);
-	} catch (e2) {
-		try { unlink(tmp); } catch (e3) {}
-		return { ok: false, log: lp };
-	}
-	return { ok: true, log: lp };
 }
 
 /* ---------- base64 ---------- */
@@ -330,11 +286,7 @@ const methods = {
 			let b64 = base64_str(json({ kind: kind, content: content, identifier: identifier }), 'generate_typed');
 			if (!b64.ok) return { ok: false, error: 'base64 ошибка', log: b64.log };
 
-			let line = id + '\t' + b64.data + '\t' + r.image;
-			let save = image_save(kind, line, 'generate_typed');
-			if (!save.ok) return { ok: false, error: 'Не удалось сохранить картинку. Подробнее в логе: ' + save.log, log: save.log };
-
-			return { ok: true, id: id, kind: kind, image: r.image, content: content, log: save.log };
+			return { ok: true, id: id, kind: kind, image: r.image, content: content, log: lp };
 		}
 	},
 
@@ -369,13 +321,7 @@ const methods = {
 			let r = qr_generate_via_script(wp.payload, size, level, 'wifi_generate');
 			if (!r.ok) return { ok: false, error: r.error, log: r.log };
 
-			let info = base64_str(json({ kind: 'wifi', content: wp.payload, identifier: wp.ssid || '(скрытая)' }), 'wifi_generate');
-			if (!info.ok) return { ok: false, error: 'Не удалось закодировать информацию в base64. Подробнее в логе: ' + info.log, log: info.log };
-			let line = r.stamp + '\t' + info.data + '\t' + r.image;
-			let save = image_save('wifi', line, 'wifi_generate');
-			if (!save.ok) return { ok: false, error: 'Не удалось сохранить картинку. Подробнее в логе: ' + save.log, log: save.log };
-
-			return { ok: true, ssid: wp.ssid, encryption: wp.encryption, image: r.image, content: wp.payload, log: save.log };
+			return { ok: true, ssid: wp.ssid, encryption: wp.encryption, image: r.image, content: wp.payload, log: lp };
 		}
 	},
 
